@@ -12,3 +12,4 @@ See Convex docs at https://docs.convex.dev/home
 npm create convex@latest -t nextjs-lucia-shadcn
 ```
 # convextest
+# convextest
