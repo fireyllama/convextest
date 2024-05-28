@@ -79,6 +79,13 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
+      - name: Load the environment variables
+        run: |
+          touch .env.local
+          echo "CONVEX_DEPLOYMENT=${{ secrets.CONVEX_DEPLOYMENT }}" >> .env.local
+          echo "NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }}" >> .env.local
+          yarn build
+      
 
   # Deployment job 
   deploy:
