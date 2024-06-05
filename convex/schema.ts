@@ -14,7 +14,24 @@ export default defineSchema(
     numbers: defineTable({
       value: v.number(),
     }),
+    urls: defineTable({
+      value: v.string(),
+    }),
+    articles: defineTable({
+      title: v.string(),
+      content: v.string(),
+    }),
+    buckets: defineTable({
+      name: v.string(),
+      items: v.array(v.object({
+        id: v.string(),
+        type: v.string()
+      }))
+
+    })
+    
   },
+
   // If you ever get an error about schema mismatch
   // between your data and your schema, and you cannot
   // change the schema to match the current data in your database,

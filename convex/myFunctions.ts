@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { queryWithAuth } from "@convex-dev/convex-lucia-auth";
+import { title } from "process";
 
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
@@ -17,6 +18,8 @@ export const listNumbers = queryWithAuth({
   handler: async (ctx, args) => {
     //// Read the database as many times as you need here.
     //// See https://docs.convex.dev/database/reading-data.
+    
+
     const numbers = await ctx.db
       .query("numbers")
       // Ordered by _creationTime, return most recent
@@ -25,6 +28,21 @@ export const listNumbers = queryWithAuth({
     return {
       viewer: ctx.session?.user.email,
       numbers: numbers.toReversed().map((number) => number.value),
+    };
+  },
+});
+
+export const listUrls = queryWithAuth({
+  args: {
+  },
+  handler: async (ctx, args) => {
+    const urls = await ctx.db
+      .query("urls")
+      .order("desc")
+      .collect();
+    return {
+      viewer: ctx.session?.user.email,
+      urls: urls.toReversed().map((url) => url.value),
     };
   },
 });
@@ -43,12 +61,58 @@ export const addNumber = mutation({
     //// See https://docs.convex.dev/database/writing-data.
 
     const id = await ctx.db.insert("numbers", { value: args.value });
+    const id2 = 'k5700vq0frbmj04vrvayz147wn6tc6ze'
+    const id3 = ctx.db.normalizeId("buckets", id2)
 
-    console.log("Added new document with id:", id);
+    if (id3 !== null) {
+      const retrieved = await ctx.db.get(id3);
+      console.log("Retrieved number with id:", id3, retrieved);
+      if(retrieved !== null) {
+        const id4 = await ctx.db.patch(id3, {items: [...retrieved.items, { id: id, type: "apples" }]})
+      }
+      // const id4 = await ctx.db.insert("buckets", {name: "Bucket 1", items: [{ id: id3, type: "numbers" }]})
+      
+      
+    }
+
+    
+
+
+
+    console.log("Added new number with id:", id);
     // Optionally, return a value from your mutation.
     // return id;
   },
 });
+
+export const sendURL = mutation({
+  args: {
+    url: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const id = await ctx.db.insert("urls", { value: args.url });
+    console.log("Added new URL with id:", id);
+
+    const id2 = 'k5700vq0frbmj04vrvayz147wn6tc6ze'
+    const id3 = ctx.db.normalizeId("buckets", id2)
+    // if (id3 !== null) {
+    //   const id2 = await ctx.db.patch(id3, {items: {name: "Bucket 1", items: [{ id: id, type: "urls" }]}})
+    // }
+  },
+});
+
+export const sendArticle = mutation({
+  args: {
+    title: v.string(),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const id = await ctx.db.insert("articles", { title: args.title, content: args.content });
+    console.log("Added new article with id:", id);
+  },
+});
+
+
 
 // You can fetch data from and send data to third-party APIs via an action:
 export const myAction = action({
