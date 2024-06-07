@@ -7,6 +7,9 @@ import { title } from "process";
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
 
+const queueBucketId = 'k5700vq0frbmj04vrvayz147wn6tc6ze'
+
+
 // You can read data from the database via a query:
 export const listNumbers = queryWithAuth({
   // Validators for arguments.
@@ -27,7 +30,7 @@ export const listNumbers = queryWithAuth({
       .take(args.count);
     return {
       viewer: ctx.session?.user.email,
-      numbers: numbers.toReversed().map((number) => number.value),
+      numbers: numbers.reverse().map((number) => number.value),
     };
   },
 });
@@ -42,7 +45,56 @@ export const listUrls = queryWithAuth({
       .collect();
     return {
       viewer: ctx.session?.user.email,
-      urls: urls.toReversed().map((url) => url.value),
+      urls: urls.reverse().map((url) => url.value),
+    };
+  },
+});
+
+export const getBucketNames = queryWithAuth({
+  args: {
+  },
+  handler: async (ctx, args) => {
+    const buckets = await ctx.db
+      .query("buckets")
+      .order("desc")
+      .collect();
+    return {
+      viewer: ctx.session?.user.email,
+      buckets: buckets.reverse().map((bucket) => bucket.name),
+    };
+  },
+});
+export const getBucket = queryWithAuth({
+  args: {
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const bucket = await ctx.db
+      .query("buckets")
+      .filter((q) => q.eq(q.field("name"), args.name))
+      .collect();
+    return {
+      viewer: ctx.session?.user.email,
+      bucket: bucket.reverse().map((bucket) => bucket),
+    };
+  },
+});
+
+export const getItems = queryWithAuth({
+  args: {
+    type: v.string(),
+    id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const idNormal = ctx.db.normalizeId(args.type, args.id)
+
+    const items = await ctx.db
+      .query(args.type)
+      .filter((q) => q.eq(q.id(), args.id))
+      .collect();
+    return {
+      viewer: ctx.session?.user.email,
+      items: items.reverse().map((item) => item),
     };
   },
 });
@@ -61,27 +113,17 @@ export const addNumber = mutation({
     //// See https://docs.convex.dev/database/writing-data.
 
     const id = await ctx.db.insert("numbers", { value: args.value });
-    const id2 = 'k5700vq0frbmj04vrvayz147wn6tc6ze'
-    const id3 = ctx.db.normalizeId("buckets", id2)
+    const queueBucketIdNormal = ctx.db.normalizeId("buckets", queueBucketId)
 
-    if (id3 !== null) {
-      const retrieved = await ctx.db.get(id3);
-      console.log("Retrieved number with id:", id3, retrieved);
+    if (queueBucketIdNormal !== null) {
+      const retrieved = await ctx.db.get(queueBucketIdNormal);
+      console.log("Retrieved number with id:", queueBucketIdNormal, retrieved);
       if(retrieved !== null) {
-        const id4 = await ctx.db.patch(id3, {items: [...retrieved.items, { id: id, type: "apples" }]})
+        const itemInBucketId = await ctx.db.patch(queueBucketIdNormal, {items: [...retrieved.items, { id: id, type: "numbers" }]})
+        console.log("Added number to bucket with id:", queueBucketIdNormal, itemInBucketId);
       }
-      // const id4 = await ctx.db.insert("buckets", {name: "Bucket 1", items: [{ id: id3, type: "numbers" }]})
-      
-      
     }
-
-    
-
-
-
     console.log("Added new number with id:", id);
-    // Optionally, return a value from your mutation.
-    // return id;
   },
 });
 
@@ -93,11 +135,16 @@ export const sendURL = mutation({
     const id = await ctx.db.insert("urls", { value: args.url });
     console.log("Added new URL with id:", id);
 
-    const id2 = 'k5700vq0frbmj04vrvayz147wn6tc6ze'
-    const id3 = ctx.db.normalizeId("buckets", id2)
-    // if (id3 !== null) {
-    //   const id2 = await ctx.db.patch(id3, {items: {name: "Bucket 1", items: [{ id: id, type: "urls" }]}})
-    // }
+    const queueBucketIdNormal = ctx.db.normalizeId("buckets", queueBucketId)
+
+    if (queueBucketIdNormal !== null) {
+      const retrieved = await ctx.db.get(queueBucketIdNormal);
+      console.log("Retrieved number with id:", queueBucketIdNormal, retrieved);
+      if(retrieved !== null) {
+        const itemInBucketId = await ctx.db.patch(queueBucketIdNormal, {items: [...retrieved.items, { id: id, type: "urls" }]})
+        console.log("Added number to bucket with id:", queueBucketIdNormal, itemInBucketId);
+      }
+    }
   },
 });
 
@@ -109,8 +156,20 @@ export const sendArticle = mutation({
   handler: async (ctx, args) => {
     const id = await ctx.db.insert("articles", { title: args.title, content: args.content });
     console.log("Added new article with id:", id);
+
+    const queueBucketIdNormal = ctx.db.normalizeId("buckets", queueBucketId)
+
+    if (queueBucketIdNormal !== null) {
+      const retrieved = await ctx.db.get(queueBucketIdNormal);
+      console.log("Retrieved number with id:", queueBucketIdNormal, retrieved);
+      if(retrieved !== null) {
+        const itemInBucketId = await ctx.db.patch(queueBucketIdNormal, {items: [...retrieved.items, { id: id, type: "articles" }]})
+        console.log("Added number to bucket with id:", queueBucketIdNormal, itemInBucketId);
+      }
+    }
   },
 });
+
 
 
 

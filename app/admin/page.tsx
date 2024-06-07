@@ -5,7 +5,7 @@ import { Link } from "@/components/typography/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { Card, CardTitle, CardHeader, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 
 import { api } from "@/convex/_generated/api";
 import {
@@ -21,14 +21,17 @@ import ReactDOM from "react-dom";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 import { add } from "date-fns";
+import { query } from "@/convex/_generated/server";
+import { TableDefinition } from "convex/server";
+import { get } from "http";
 
-const getItems = (count, offset = 0) =>
+const getItems = (count: number, offset = 0) =>
   Array.from({ length: count }, (v, k) => k).map(k => ({
     id: `item-${k + offset}-${new Date().getTime()}`,
     content: `item ${k + offset}`
   }));
 
-const reorder = (list, startIndex, endIndex) => {
+const reorder = (list, startIndex: number, endIndex: number) => {
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
   result.splice(endIndex, 0, removed);
@@ -39,10 +42,12 @@ const reorder = (list, startIndex, endIndex) => {
 /**
  * Moves an item from one list to another list.
  */
-const move = (source, destination, droppableSource, droppableDestination) => {
+const move = (source: Array<object>, destination: Array<object>, droppableSource: any, droppableDestination: any) => {
   const sourceClone = Array.from(source);
   const destClone = Array.from(destination);
   const [removed] = sourceClone.splice(droppableSource.index, 1);
+  console.log(typeof droppableSource)
+  console.log(droppableSource)
 
   destClone.splice(droppableDestination.index, 0, removed);
 
@@ -53,6 +58,7 @@ const move = (source, destination, droppableSource, droppableDestination) => {
   return result;
 };
 const grid = 8;
+// const headers = ["Header 1", "Header 2", "h3"]; // Add more headers as needed
 
 const getItemStyle = (isDragging, draggableStyle) => ({
   // some basic styles to make the items look a bit nicer
@@ -92,12 +98,24 @@ function SignedIn() {
     useQueryWithAuth(api.myFunctions.listNumbers, {
       count: 10,
     }) ?? {};
+  const headers = useQueryWithAuth(api.myFunctions.getBucketNames, {})?.buckets ?? [];
+  console.log(headers)
+  const h0 = headers[0];
+  console.log(h0)
+  const bucket = useQueryWithAuth(api.myFunctions.getBucket, {name: "N/A"})?.bucket ?? [];
+  console.log(bucket); 
+  console.log(getItems(10))
+  
+
+  const [state, setState] = useState([getItems(10)]);
+
+// 
+  // const headers = buckets;
   const { urls } = useQueryWithAuth(api.myFunctions.listUrls, {}) ?? {};
   const addNumber = useMutation(api.myFunctions.addNumber);
   const sendURL = useMutation(api.myFunctions.sendURL);
   const sendArticle = useMutation(api.myFunctions.sendArticle);
 
-  const [state, setState] = useState([getItems(10), getItems(5, 10)]);
 
   function onDragEnd(result) {
     
@@ -119,11 +137,13 @@ function SignedIn() {
       setState(newState);
       console.log(newState)
     } else {
-      
+      console.log(state[sInd])
+      console.log(typeof state[dInd])
       const result = move(state[sInd], state[dInd], source, destination);
       const newState = [...state];
       newState[sInd] = result[sInd];
       newState[dInd] = result[dInd];
+
 
       setState(newState.filter(group => group.length));
       console.log(newState);
@@ -179,7 +199,7 @@ function SignedIn() {
                   style={getListStyle(snapshot.isDraggingOver)}
                   {...provided.droppableProps}
                 >
-                  header maybe
+                  <h2>{headers[ind]}</h2>
                   {el.map((item, index) => (
                     <Draggable
                       key={item.id}
@@ -196,6 +216,7 @@ function SignedIn() {
                             provided.draggableProps.style
                           )}
                         >
+                          <CardDescription>Maybe work</CardDescription>
                           <div
                             style={{
                               display: "flex",
