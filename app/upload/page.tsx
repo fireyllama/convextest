@@ -60,7 +60,7 @@ function AuthForm() {
         <Input type="text" name="url" id="url" className="mb-4" />
         <Button 
         onClick={() => {
-          let el = document.getElementById('url') as HTMLInputElement;
+          const el = document.getElementById('url') as HTMLInputElement;
           if (el !== null)
             void sendURL({ url: el.value });
             
@@ -76,8 +76,8 @@ function AuthForm() {
         <Textarea className="w-full" id="articleContent"/>
         <Button 
         onClick={() => {
-          let articleTitle = document.getElementById('articleTitle') as HTMLInputElement;
-          let articleContent = document.getElementById('articleContent') as HTMLTextAreaElement;
+          const articleTitle = document.getElementById('articleTitle') as HTMLInputElement;
+          const articleContent = document.getElementById('articleContent') as HTMLTextAreaElement;
 
           if (articleTitle !== null && articleContent)
             void sendArticle({ title: articleTitle.value, content: articleContent.value});
