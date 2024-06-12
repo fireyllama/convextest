@@ -16,7 +16,7 @@ import {
   useSignUpSignIn,
 } from "@convex-dev/convex-lucia-auth/react";
 import { useMutation } from "convex/react";
-import React, { useState } from "react";
+import React, { CSSProperties, useState } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot, DroppableProvided, DroppableStateSnapshot } from "react-beautiful-dnd";
 
 import { add } from "date-fns";
@@ -69,7 +69,7 @@ const move = (
 
 const grid = 8;
 
-const getItemStyle = (isDragging: boolean, draggableStyle: React.CSSProperties): React.CSSProperties => ({
+const getItemStyle = (isDragging: boolean, draggableStyle: CSSProperties | undefined): CSSProperties => ({
   userSelect: "none",
   padding: grid * 2,
   margin: `0 0 ${grid}px 0`,
@@ -208,8 +208,9 @@ function SignedIn() {
                             {...provided.dragHandleProps}
                             style={getItemStyle(
                               snapshot.isDragging,
-                              provided.draggableProps.style
-                            )}
+                              provided.draggableProps.style)
+                            }
+                              
                             className="mb-2 p-4 border rounded-lg shadow-sm"
                           >
                             <div className="flex justify-between items-center">
