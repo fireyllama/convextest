@@ -17,67 +17,72 @@ import {
 } from "@convex-dev/convex-lucia-auth/react";
 import { useMutation } from "convex/react";
 import React, { useState } from "react";
-import ReactDOM from "react-dom";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot, DroppableProvided, DroppableStateSnapshot } from "react-beautiful-dnd";
 
 import { add } from "date-fns";
 import { query } from "@/convex/_generated/server";
 import { TableDefinition } from "convex/server";
-import { get } from "http";
 
-const getItems = (count: number, offset = 0) =>
-  Array.from({ length: count }, (v, k) => k).map(k => ({
+interface Item {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+}
+
+const getItems = (count: number, offset = 0): Item[] =>
+  Array.from({ length: count }, (_, k) => ({
     id: `item-${k + offset}-${new Date().getTime()}`,
-    content: `item ${k + offset}`
+    title: `Title ${k + offset}`,
+    description: `Description ${k + offset}`,
+    type: `Type ${k + offset}`
   }));
 
-const reorder = (list, startIndex: number, endIndex: number) => {
+const reorder = (list: Item[], startIndex: number, endIndex: number): Item[] => {
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
   result.splice(endIndex, 0, removed);
-
   return result;
 };
 
 /**
  * Moves an item from one list to another list.
  */
-const move = (source: Array<object>, destination: Array<object>, droppableSource: any, droppableDestination: any) => {
+const move = (
+  source: Item[],
+  destination: Item[],
+  droppableSource: { index: number, droppableId: string },
+  droppableDestination: { index: number, droppableId: string }
+): Record<string, Item[]> => {
   const sourceClone = Array.from(source);
   const destClone = Array.from(destination);
   const [removed] = sourceClone.splice(droppableSource.index, 1);
-  console.log(typeof droppableSource)
-  console.log(droppableSource)
 
   destClone.splice(droppableDestination.index, 0, removed);
 
-  const result = {};
+  const result: Record<string, Item[]> = {};
   result[droppableSource.droppableId] = sourceClone;
   result[droppableDestination.droppableId] = destClone;
 
   return result;
 };
-const grid = 8;
-// const headers = ["Header 1", "Header 2", "h3"]; // Add more headers as needed
 
-const getItemStyle = (isDragging, draggableStyle) => ({
-  // some basic styles to make the items look a bit nicer
+const grid = 8;
+
+const getItemStyle = (isDragging: boolean, draggableStyle: React.CSSProperties): React.CSSProperties => ({
   userSelect: "none",
   padding: grid * 2,
   margin: `0 0 ${grid}px 0`,
-
-  // change background colour if dragging
   background: isDragging ? "lightgreen" : "black",
-
-  // styles we need to apply on draggables
-  ...draggableStyle
+  ...draggableStyle,
+  ...(draggableStyle && draggableStyle)
 });
-const getListStyle = isDraggingOver => ({
+
+const getListStyle = (isDraggingOver: boolean): React.CSSProperties => ({
   background: isDraggingOver ? "grey" : "black",
   padding: grid,
   width: 250
 });
-
 
 export default function Home() {
   const sessionId = useSessionId();
@@ -85,13 +90,12 @@ export default function Home() {
   return (
     <main className="container max-w-2xl flex flex-col gap-8">
       <h1 className="text-4xl font-extrabold my-8 text-center">
-        apelpasd
+        Drag and Drop Demo
       </h1>
       {sessionId ? <SignedIn /> : <AuthForm />}
     </main>
   );
 }
-
 
 function SignedIn() {
   const { viewer, numbers } =
@@ -99,31 +103,19 @@ function SignedIn() {
       count: 10,
     }) ?? {};
   const headers = useQueryWithAuth(api.myFunctions.getBucketNames, {})?.buckets ?? [];
-  console.log(headers)
-  const h0 = headers[0];
-  console.log(h0)
   const bucket = useQueryWithAuth(api.myFunctions.getBucket, {name: "N/A"})?.bucket ?? [];
-  console.log(bucket); 
-  console.log(getItems(10))
-  
 
-  const [state, setState] = useState([getItems(10)]);
+  const [state, setState] = useState<Item[][]>([getItems(10)]);
+  const [columnTitles, setColumnTitles] = useState<string[]>(['Column 1']); // Initialize with one column title
 
-// 
-  // const headers = buckets;
   const { urls } = useQueryWithAuth(api.myFunctions.listUrls, {}) ?? {};
   const addNumber = useMutation(api.myFunctions.addNumber);
   const sendURL = useMutation(api.myFunctions.sendURL);
   const sendArticle = useMutation(api.myFunctions.sendArticle);
 
-
-  function onDragEnd(result) {
-    
+  function onDragEnd(result: DropResult) {
     const { source, destination } = result;
-    console.log(source);
-    console.log(destination);
 
-    // dropped outside the list
     if (!destination) {
       return;
     }
@@ -135,125 +127,122 @@ function SignedIn() {
       const newState = [...state];
       newState[sInd] = items;
       setState(newState);
-      console.log(newState)
     } else {
-      console.log(state[sInd])
-      console.log(typeof state[dInd])
       const result = move(state[sInd], state[dInd], source, destination);
       const newState = [...state];
       newState[sInd] = result[sInd];
       newState[dInd] = result[dInd];
-
-
       setState(newState.filter(group => group.length));
-      console.log(newState);
-
     }
   }
-  
+
+  function handleAddColumn() {
+    setState([...state, []]);
+    setColumnTitles([...columnTitles, `Column ${columnTitles.length + 1}`]);
+  }
+
+  function handleAddItem() {
+    setState([...state, getItems(1)]);
+  }
+
+  function handleColumnTitleChange(index: number, title: string) {
+    const newTitles = [...columnTitles];
+    newTitles[index] = title;
+    setColumnTitles(newTitles);
+  }
+
   return (
     <>
       <p className="flex gap-4 items-center">
-        welcome {viewer}
+        Welcome {viewer}
         <SignOutButton />
       </p>
-      
+
       <p>
-        nums:{" "}
+        Numbers:{" "}
         {numbers?.length === 0
           ? "Click the button!"
           : numbers ? numbers.join(", ") : "..."}
       </p>
       <p>
-        urls:{" "}
+        URLs:{" "}
         {urls?.length === 0
           ? "Click the button!"
           : urls ? urls.join(", ") : "..."}
       </p>
 
       <div>
-      <Button
-        type="button"
-        onClick={() => {
-          console.log(...state)
-          setState([...state, []]);
-        }}
-      >
-        Add new group
-      </Button>
-      <Button
-        type="button"
-        onClick={() => {
-          setState([...state, getItems(1)]);
-        }}
-      >
-        Add new item
-      </Button>
-      <div style={{ display: "flex", flex: "10 0 auto"}}>
-        <DragDropContext onDragEnd={onDragEnd}>
-          {state.map((el, ind) => (
-            <Droppable key={ind} droppableId={`${ind}`}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  style={getListStyle(snapshot.isDraggingOver)}
-                  {...provided.droppableProps}
-                >
-                  <h2>{headers[ind]}</h2>
-                  {el.map((item, index) => (
-                    <Draggable
-                      key={item.id}
-                      draggableId={item.id}
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <Card
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          style={getItemStyle(
-                            snapshot.isDragging,
-                            provided.draggableProps.style
-                          )}
-                        >
-                          <CardDescription>Maybe work</CardDescription>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-around",
-                            }}
+        <Button type="button" onClick={handleAddColumn}>
+          Add new group
+        </Button>
+        <Button type="button" onClick={handleAddItem}>
+          Add new item
+        </Button>
+        <div style={{ display: "flex", flex: "10 0 auto" }}>
+          <DragDropContext onDragEnd={onDragEnd}>
+            {state.map((el, ind) => (
+              <Droppable key={ind} droppableId={`${ind}`}>
+                {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    style={getListStyle(snapshot.isDraggingOver)}
+                    {...provided.droppableProps}
+                  >
+                    <Input
+                      type="text"
+                      value={columnTitles[ind]}
+                      onChange={(e) => handleColumnTitleChange(ind, e.target.value)}
+                      placeholder={`Column ${ind + 1}`}
+                      className="mb-2"
+                    />
+                    {el.map((item, index) => (
+                      <Draggable
+                        key={item.id}
+                        draggableId={item.id}
+                        index={index}
+                      >
+                        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={getItemStyle(
+                              snapshot.isDragging,
+                              provided.draggableProps.style?.transform as React.CSSProperties
+                            )}
+                            className="mb-2 p-4 border rounded-lg shadow-sm"
                           >
-                            
-                            {item.content}
-                            <Button
-                              type="button"
-                              onClick={() => {
-                                const newState = [...state];
-                                newState[ind].splice(index, 1);
-                                setState(
-                                  newState.filter(group => group.length)
-                                );
-                              }}
-                            >
-                              delete
-                            </Button>
-                          </div>
-                        </Card>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          ))}
-        </DragDropContext>
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <h3 className="text-lg font-bold">{item.title}</h3>
+                                <p className="text-sm text-gray-400">{item.description}</p>
+                                <p className="text-xs text-gray-300">{item.type}</p>
+                              </div>
+                              <button
+                                className="text-red-500 hover:text-red-700"
+                                onClick={() => {
+                                  const newState = [...state];
+                                  newState[ind].splice(index, 1);
+                                  setState(
+                                    newState.filter(group => group.length)
+                                  );
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </Card>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            ))}
+          </DragDropContext>
+        </div>
       </div>
-    </div>
-
-     
-      
-      
     </>
   );
 }

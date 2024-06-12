@@ -80,24 +80,24 @@ export const getBucket = queryWithAuth({
   },
 });
 
-export const getItems = queryWithAuth({
-  args: {
-    type: v.string(),
-    id: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const idNormal = ctx.db.normalizeId(args.type, args.id)
+// export const getItems = queryWithAuth({
+//   args: {
+//     type: v.string(),
+//     id: v.string(),
+//   },
+//   handler: async (ctx, args) => {
+//     const idNormal = ctx.db.normalizeId(args.type, args.id)
 
-    const items = await ctx.db
-      .query(args.type)
-      .filter((q) => q.eq(q.id(), args.id))
-      .collect();
-    return {
-      viewer: ctx.session?.user.email,
-      items: items.reverse().map((item) => item),
-    };
-  },
-});
+//     const items = await ctx.db
+//       .query(args.type)
+//       .filter((q) => q.eq(q.id(), args.id))
+//       .collect();
+//     return {
+//       viewer: ctx.session?.user.email,
+//       items: items.reverse().map((item) => item),
+//     };
+//   },
+// });
 
 // You can write data to the database via a mutation:
 export const addNumber = mutation({
