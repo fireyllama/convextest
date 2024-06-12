@@ -208,7 +208,7 @@ function SignedIn() {
                             {...provided.dragHandleProps}
                             style={getItemStyle(
                               snapshot.isDragging,
-                              provided.draggableProps.style?.transform as React.CSSProperties
+                              provided.draggableProps.style
                             )}
                             className="mb-2 p-4 border rounded-lg shadow-sm"
                           >
