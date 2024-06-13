@@ -69,6 +69,8 @@ function AuthForm() {
           if (videoTitleElement !== null && videoUrlElement !== null) {
             void sendURL({ title: videoUrlElement.value, url: videoTitleElement.value });
           }
+          videoTitleElement.value = '';
+          videoUrlElement.value = '';
         }}
         type="submit">Send URL</Button>
       </form>
@@ -85,9 +87,11 @@ function AuthForm() {
           const articleContent = document.getElementById('articleContent') as HTMLTextAreaElement;
 
           if (articleTitle !== null && articleContent)
-            void sendArticle({ title: articleTitle.value, content: articleContent.value});
-            
+            void sendArticle({ title: articleTitle.value, content: articleContent.value});  
+          articleTitle.value = '';
+          articleContent.value = '';
         }}
+        
         type="submit">Send article</Button>
       </form>
 
