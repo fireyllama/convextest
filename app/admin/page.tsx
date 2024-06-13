@@ -377,15 +377,15 @@ function AuthForm() {
           {flow === "signIn" ? "Sign in" : "Sign up"}
         </Button>
       </form>
-      <Button variant="link" onClick={toggleFlow}>
+      {/* <Button variant="link" onClick={toggleFlow}>
         {flow === "signIn"
           ? "Don't have an account? Sign up"
           : "Already have an account? Sign in"}
-      </Button>
+      </Button> */}
       <div className="font-medium text-sm text-red-500">
         {error !== undefined
           ? flow === "signIn"
-            ? "Could not sign in, did you mean to sign up?"
+            ? "Could not sign in"
             : "Could not sign up, did you mean to sign in?"
           : null}
       </div>
