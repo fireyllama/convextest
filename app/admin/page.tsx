@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardTitle, CardHeader, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 
+import { useEffect } from "react";
+
 import { api } from "@/convex/_generated/api";
 import {
   useMutationWithAuth,
@@ -19,24 +21,38 @@ import { useMutation } from "convex/react";
 import React, { CSSProperties, useState } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot, DroppableProvided, DroppableStateSnapshot } from "react-beautiful-dnd";
 
-import { add } from "date-fns";
+import { add, set } from "date-fns";
 import { query } from "@/convex/_generated/server";
 import { TableDefinition } from "convex/server";
+import { Item } from "@radix-ui/react-accordion";
+import { modifyBucket } from "@/convex/myFunctions";
+
 
 interface Item {
   id: string;
   title: string;
-  description: string;
+  content: string;
   type: string;
+  articleContent?: string;
 }
 
 const getItems = (count: number, offset = 0): Item[] =>
   Array.from({ length: count }, (_, k) => ({
     id: `item-${k + offset}-${new Date().getTime()}`,
     title: `Title ${k + offset}`,
-    description: `Description ${k + offset}`,
+    content: `Description ${k + offset}`,
     type: `Type ${k + offset}`
   }));
+
+const convertToItemsArray = (itemsData: any[]): Item[] => {
+  const items: Item[] = itemsData.map((item, index) => ({
+    id: `item-${index + 1}-${new Date().getTime()}`, // Example ID generation
+    title: item.title,
+    content: item.content, 
+    type: item.type
+  }));
+  return items;
+};
 
 const reorder = (list: Item[], startIndex: number, endIndex: number): Item[] => {
   const result = Array.from(list);
@@ -69,28 +85,30 @@ const move = (
 
 const grid = 8;
 
-const getItemStyle = (isDragging: boolean, draggableStyle: CSSProperties | undefined): CSSProperties => ({
+const getItemStyle = (isDragging: boolean, draggableStyle: React.CSSProperties | undefined): React.CSSProperties => ({
   userSelect: "none",
   padding: grid * 2,
   margin: `0 0 ${grid}px 0`,
   background: isDragging ? "lightgreen" : "black",
   ...draggableStyle,
-  ...(draggableStyle && draggableStyle)
+  ...(draggableStyle && draggableStyle) // Ensure draggableStyle is not undefined
 });
 
 const getListStyle = (isDraggingOver: boolean): React.CSSProperties => ({
   background: isDraggingOver ? "grey" : "black",
   padding: grid,
-  width: 250
+  minWidth: 250,
+  maxWidth: 250,
+  marginRight: grid,
 });
 
 export default function Home() {
   const sessionId = useSessionId();
 
   return (
-    <main className="container max-w-2xl flex flex-col gap-8">
+    <main className="container w-full flex flex-col gap-8">
       <h1 className="text-4xl font-extrabold my-8 text-center">
-        apelsad
+        mr c my goat
       </h1>
       {sessionId ? <SignedIn /> : <AuthForm />}
     </main>
@@ -102,16 +120,46 @@ function SignedIn() {
     useQueryWithAuth(api.myFunctions.listNumbers, {
       count: 10,
     }) ?? {};
-  const headers = useQueryWithAuth(api.myFunctions.getBucketNames, {})?.buckets ?? [];
-  const bucket = useQueryWithAuth(api.myFunctions.getBucket, {name: "N/A"})?.bucket ?? [];
+  // const headers = useQueryWithAuth(api.myFunctions.getBucketNames, {})?.buckets ?? [];
+  // const bucket = useQueryWithAuth(api.myFunctions.getBucket, {name: "N/A"})?.bucket ?? [];
+  const {viewer2, buckets} = useQueryWithAuth(api.myFunctions.getBuckets, {}) ?? {};
 
-  const [state, setState] = useState<Item[][]>([getItems(10)]);
+  const [state, setState] = useState<Item[][]>([]);
   const [columnTitles, setColumnTitles] = useState<string[]>(['Column 1']); // Initialize with one column title
+  
+  const [columnAuthors, setColumnAuthors] = useState<string[]>(['Author 1']); // Initialize with one column author
 
   const { urls } = useQueryWithAuth(api.myFunctions.listUrls, {}) ?? {};
   const addNumber = useMutation(api.myFunctions.addNumber);
   const sendURL = useMutation(api.myFunctions.sendURL);
   const sendArticle = useMutation(api.myFunctions.sendArticle);
+  const modifyBucket = useMutation(api.myFunctions.modifyBucket);
+  const createBucket = useMutation(api.myFunctions.createBucket);
+  const deleteBucket = useMutation(api.myFunctions.deleteBucket);
+
+  useEffect(() => {
+    if (buckets) {
+      setColumnTitles(buckets.map(bucket => bucket.name));
+      setColumnAuthors(buckets.map(bucket => bucket.author));
+      setState(buckets.map(bucket => convertToItemsArray(bucket.items)));
+      // buckets.forEach(bucket => { //cloud overrides current bucket state 
+      //   const items = convertToItemsArray(bucket.items);
+      //   setState([...state, items]);
+      //   console.log("hello")
+      //   console.log(items)
+      // });
+      
+      
+    }
+  }, [buckets]);
+
+  if (!buckets) {
+    return <p>Loading...</p>;
+  }
+
+  console.log(buckets);
+
+  
 
   function onDragEnd(result: DropResult) {
     const { source, destination } = result;
@@ -139,6 +187,7 @@ function SignedIn() {
   function handleAddColumn() {
     setState([...state, []]);
     setColumnTitles([...columnTitles, `Column ${columnTitles.length + 1}`]);
+    setColumnAuthors([...columnAuthors, `Author ${columnAuthors.length + 1}`]);
   }
 
   function handleAddItem() {
@@ -151,10 +200,47 @@ function SignedIn() {
     setColumnTitles(newTitles);
   }
 
+  function handleColumnAuthorChange(index: number, author: string) {
+    const newAuthors = [...columnAuthors];
+    newAuthors[index] = author;
+    setColumnAuthors(newAuthors);
+  }
+
+  function handleSave() {
+
+    const data = state.map((column, index) => ({
+      title: columnTitles[index],
+      author: columnAuthors[index],
+      items: column
+    }));
+    console.log(data);
+    let finalIndex = 0
+    data.forEach((column, index) => {
+      console.log(column, index);
+      if (buckets) {
+        const modifiedItems = column.items.map(item => {
+          const { id, ...rest } = item;
+          return rest;
+        });
+        if (index < buckets.length) {
+          void modifyBucket({id: buckets[index]._id, name: column.title, author: column.author, items: modifiedItems});
+        } else {
+          void createBucket({name: column.title, author: column.author, items: modifiedItems});
+        }
+      }  
+      finalIndex = index;
+    });
+    if (buckets && finalIndex < buckets.length) {
+      for (let i = finalIndex + 1; i < buckets.length; i++) {
+        void deleteBucket({id: buckets[i]._id});
+      }
+    }
+  }
+
   return (
     <>
       <p className="flex gap-4 items-center">
-        Welcome {viewer}
+        welcome {viewer}
         <SignOutButton />
       </p>
 
@@ -175,10 +261,13 @@ function SignedIn() {
         <Button type="button" onClick={handleAddColumn}>
           Add new group
         </Button>
-        <Button type="button" onClick={handleAddItem}>
+        {/* <Button type="button" onClick={handleAddItem}>
           Add new item
+        </Button> */}
+        <Button type="button" onClick={handleSave} className="ml-4">
+          Save
         </Button>
-        <div style={{ display: "flex", flex: "10 0 auto" }}>
+        <div style={{ display: "flex", flex: "1 0 auto", overflowX: "auto", width: "100%" }}>
           <DragDropContext onDragEnd={onDragEnd}>
             {state.map((el, ind) => (
               <Droppable key={ind} droppableId={`${ind}`}>
@@ -195,6 +284,13 @@ function SignedIn() {
                       placeholder={`Column ${ind + 1}`}
                       className="mb-2"
                     />
+                    <Input
+                      type="text"
+                      value={columnAuthors[ind]}
+                      onChange={(e) => handleColumnAuthorChange(ind, e.target.value)}
+                      placeholder={`Author ${ind + 1}`}
+                      className="mb-4"
+                    />
                     {el.map((item, index) => (
                       <Draggable
                         key={item.id}
@@ -208,16 +304,15 @@ function SignedIn() {
                             {...provided.dragHandleProps}
                             style={getItemStyle(
                               snapshot.isDragging,
-                              provided.draggableProps.style)
-                            }
-                              
+                              provided.draggableProps.style
+                            )}
                             className="mb-2 p-4 border rounded-lg shadow-sm"
                           >
                             <div className="flex justify-between items-center">
                               <div>
                                 <h3 className="text-lg font-bold">{item.title}</h3>
-                                <p className="text-sm text-gray-400">{item.description}</p>
-                                <p className="text-xs text-gray-300">{item.type}</p>
+                                <p className="text-sm text-gray-600">{item.content}</p>
+                                <p className="text-xs text-gray-400">{item.type}</p>
                               </div>
                               <button
                                 className="text-red-500 hover:text-red-700"
@@ -247,6 +342,7 @@ function SignedIn() {
     </>
   );
 }
+
 
 function SignOutButton() {
   const signOut = useSignOut();

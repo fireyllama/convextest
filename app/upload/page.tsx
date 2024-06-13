@@ -2,9 +2,11 @@
 
 import { Code } from "@/components/typography/code";
 import { Link } from "@/components/typography/link";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Toast } from "@/components/ui/toast";
 import { api } from "@/convex/_generated/api";
 import {
   useMutationWithAuth,
@@ -56,14 +58,17 @@ function AuthForm() {
           : numbers ? numbers.join(", ") : "..."}
       </p>
       <form onSubmit={(event) => {event.preventDefault();}}>
+        <label htmlFor="url">Video TItle</label>
+        <Input type="text" name="title" id="videoTitle" className="mb-4" />
         <label htmlFor="url">URL</label>
-        <Input type="text" name="url" id="url" className="mb-4" />
+        <Input type="text" name="url" id="videoUrl" className="mb-4" />
         <Button 
         onClick={() => {
-          const el = document.getElementById('url') as HTMLInputElement;
-          if (el !== null)
-            void sendURL({ url: el.value });
-            
+          const videoTitleElement = document.getElementById('videoTitle') as HTMLInputElement;
+          const videoUrlElement = document.getElementById('videoUrl') as HTMLInputElement;
+          if (videoTitleElement !== null && videoUrlElement !== null) {
+            void sendURL({ title: videoUrlElement.value, url: videoTitleElement.value });
+          }
         }}
         type="submit">Send URL</Button>
       </form>

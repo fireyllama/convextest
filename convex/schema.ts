@@ -23,8 +23,10 @@ export default defineSchema(
     }),
     buckets: defineTable({
       name: v.string(),
+      author: v.string(),
       items: v.array(v.object({
-        id: v.string(),
+        title: v.string(),
+        content: v.string(),
         type: v.string()
       }))
 
